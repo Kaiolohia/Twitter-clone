@@ -1,3 +1,15 @@
+"""
+Step seven documentation:
+Logged uesr is kept track primarily through the session but the user data is stored in "g.user"
+"g" is a global varibile that can be accessed by all files including jinja html
+add_user_to_g is called before each request to pull the current status of login,
+if there is a currently logged in user, "g.user" will store the data of that user,
+otherwise g.user will be empty
+"@app.before_request" is a wrapper that will call the wrapped funciton each time a request is made through
+app.py, in this case, each request will also call "add_user_to_g" along with any other functions relating
+to the request.
+"""
+
 import os
 
 from flask import Flask, render_template, request, flash, redirect, session, g
@@ -6,7 +18,7 @@ from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
 from forms import UserAddForm, LoginForm, MessageForm, UserEditForm
-from models import db, connect_db, User, Message
+from models import db, connect_db, User, Message, Follows
 
 CURR_USER_KEY = "curr_user"
 
@@ -323,8 +335,12 @@ def homepage():
     """
 
     if g.user:
+        relavent_users = Follows.query.filter_by(user_following_id = g.user.id).all()
+        relavent_users = [idx.user_being_followed_id for idx in relavent_users]
+        relavent_users.append(g.user.id)
         messages = (Message
                     .query
+                    .filter(Message.user_id.in_(relavent_users))
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())
